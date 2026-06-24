@@ -1,0 +1,71 @@
+import { Response, NextFunction } from 'express';
+import { RequestWithUser } from '../../../../../core/middlewares/authMiddleware';
+import { CounselorUseCasesPort } from '../../../../../application/ports/inputs/CounselorUseCasesPort';
+
+export class CounselorController {
+  constructor(private readonly counselorUseCases: CounselorUseCasesPort) {}
+
+  createGroup = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const { name, accessCode } = req.body;
+      const group = await this.counselorUseCases.createGroup(counselorId, name, accessCode);
+      res.status(201).json(group);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getGroups = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const groups = await this.counselorUseCases.getGroups(counselorId);
+      res.status(200).json(groups);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getStudentsInGroup = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const { groupId } = req.params;
+      const students = await this.counselorUseCases.getStudentsInGroup(groupId, counselorId);
+      res.status(200).json(students);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getStudentFile = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const { studentId } = req.params;
+      const studentFile = await this.counselorUseCases.getStudentFile(studentId, counselorId);
+      res.status(200).json(studentFile);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  createSession = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const { studentId } = req.params;
+      const session = await this.counselorUseCases.createSession(counselorId, studentId, req.body);
+      res.status(201).json(session);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  assignTask = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const task = await this.counselorUseCases.assignTask(counselorId, req.body);
+      res.status(201).json(task);
+    } catch (err) {
+      next(err);
+    }
+  };
+}
