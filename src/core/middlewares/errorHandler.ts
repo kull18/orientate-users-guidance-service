@@ -7,6 +7,12 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
+  // Handle invalid JSON payload
+  if (err instanceof SyntaxError && 'status' in err && (err as any).status === 400 && 'body' in err) {
+    res.status(400).json({ error: 'El cuerpo de la petición contiene JSON no válido.' });
+    return;
+  }
+
   // Check if it's a domain business exception
   if (err instanceof BusinessException) {
     res.status(err.statusCode).json({ error: err.message });
