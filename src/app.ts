@@ -1,12 +1,22 @@
 import express, { Application } from 'express';
+import helmet from 'helmet';
 import studentRouter from './infrastructure/adapters/inputs/http/routes/studentRoutes';
 import counselorRouter from './infrastructure/adapters/inputs/http/routes/counselorRoutes';
 import { errorHandler } from './core/middlewares/errorHandler';
+import { corsMiddleware } from './core/middlewares/corsMiddleware';
+import { apiLimiter } from './core/middlewares/rateLimitMiddleware';
 
 const app: Application = express();
 
-// Middlewares
+// Middlewares de Seguridad Globales
+app.use(helmet());
+app.use(corsMiddleware);
+
+// Middlewares estándar
 app.use(express.json());
+
+// Aplicar Limitador de Tasa a las rutas /api/
+app.use('/api', apiLimiter);
 
 // Routes
 app.use('/api/v1/students', studentRouter);
