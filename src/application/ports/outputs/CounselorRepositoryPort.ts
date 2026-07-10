@@ -18,4 +18,6 @@ export interface CounselorRepositoryPort {
   findSessionsByStudentId(studentId: string): Promise<Session[]>;
   findAlertsByStudentId(studentId: string): Promise<Alert[]>;
   isStudentAssociatedWithCounselor(studentId: string, counselorId: string): Promise<boolean>;
+  findStudentsByCounselorId(counselorId: string): Promise<StudentProfile[]>;
+  updateGroup(group: Group): Promise<Group>;
 }

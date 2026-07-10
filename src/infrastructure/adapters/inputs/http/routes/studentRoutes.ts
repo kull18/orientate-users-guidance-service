@@ -18,5 +18,6 @@ router.post('/profile', validateCreateStudentProfile, studentController.createPr
 router.get('/profile', studentController.getProfile);
 router.patch('/profile', validateUpdateStudentProfile, studentController.updateProfile);
 router.post('/join-group', validateJoinGroup, studentController.joinGroup);
+router.get('/groups', studentController.getJoinedGroups);
 
 export default router;

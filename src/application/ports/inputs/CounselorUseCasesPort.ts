@@ -33,4 +33,7 @@ export interface CounselorUseCasesPort {
   getStudentFile(studentId: string, counselorId: string): Promise<StudentFileResult>;
   createSession(counselorId: string, studentId: string, data: CreateSessionInput): Promise<Session>;
   assignTask(counselorId: string, data: AssignTaskInput): Promise<Task>;
+  getStudents(counselorId: string): Promise<StudentProfile[]>;
+  getGroupDetails(groupId: string, counselorId: string): Promise<Group>;
+  updateGroup(groupId: string, counselorId: string, name?: string, accessCode?: string): Promise<Group>;
 }

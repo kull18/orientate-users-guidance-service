@@ -10,7 +10,7 @@ export class PostgresStudentRepository implements StudentRepositoryPort {
 
   private mapRowToProfile(row: any): StudentProfile {
     return new StudentProfile({
-      id: row.id,
+      id: row.user_id,
       userId: row.user_id,
       subjectsLiked: row.subjects_liked || [],
       subjectsDisliked: row.subjects_disliked || [],
@@ -188,4 +188,19 @@ export class PostgresStudentRepository implements StudentRepositoryPort {
       throw new DatabaseException(`Error saving alert: ${error.message}`);
     }
   }
+
+  async findJoinedGroups(userId: string): Promise<Group[]> {
+    const query = `
+      SELECT g.* FROM groups g
+      INNER JOIN student_group sg ON g.id = sg.group_id
+      WHERE sg.user_id = $1;
+    `;
+    try {
+      const result = await this.pool.query(query, [userId]);
+      return result.rows.map(row => this.mapRowToGroup(row));
+    } catch (error: any) {
+      throw new DatabaseException(`Error finding joined groups: ${error.message}`);
+    }
+  }
 }
+

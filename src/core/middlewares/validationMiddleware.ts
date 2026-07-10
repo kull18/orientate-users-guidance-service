@@ -127,6 +127,32 @@ export const validateCreateGroup = (req: Request, res: Response, next: NextFunct
   next();
 };
 
+// Validate Group Update (PUT /groups/:groupId)
+export const validateUpdateGroup = (req: Request, res: Response, next: NextFunction): void => {
+  const { groupId } = req.params;
+  const { name, accessCode } = req.body;
+
+  if (!isUUID(groupId)) {
+    throw new ValidationException('El ID del grupo (groupId) debe ser un UUID válido.');
+  }
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || name.trim() === '') {
+      throw new ValidationException('El nombre del grupo (name) debe ser un texto no vacío.');
+    }
+    req.body.name = name.trim();
+  }
+
+  if (accessCode !== undefined) {
+    if (typeof accessCode !== 'string' || accessCode.trim() === '') {
+      throw new ValidationException('El código de acceso (accessCode) debe ser un texto no vacío.');
+    }
+    req.body.accessCode = accessCode.trim();
+  }
+
+  next();
+};
+
 // 5. Validate Session Creation (POST /students/:studentId/sessions)
 export const validateCreateSession = (req: Request, res: Response, next: NextFunction): void => {
   const { studentId } = req.params;
