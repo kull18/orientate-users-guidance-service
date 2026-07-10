@@ -5,7 +5,8 @@ import {
   validateCreateGroup,
   validateCreateSession,
   validateAssignTask,
-  validateUuidParam
+  validateUuidParam,
+  validateUpdateGroup
 } from '../../../../../core/middlewares/validationMiddleware';
 
 const router = Router();
@@ -17,9 +18,28 @@ router.use(requireRole(['ORIENTADOR']));
 
 router.post('/groups', validateCreateGroup, counselorController.createGroup);
 router.get('/groups', counselorController.getGroups);
+router.get('/groups/:groupId', validateUuidParam('groupId'), counselorController.getGroupDetails);
+router.put('/groups/:groupId', validateUpdateGroup, counselorController.updateGroup);
 router.get('/groups/:groupId/students', validateUuidParam('groupId'), counselorController.getStudentsInGroup);
+router.get('/students', counselorController.getStudents);
 router.get('/students/:studentId/file', validateUuidParam('studentId'), counselorController.getStudentFile);
 router.post('/students/:studentId/sessions', validateCreateSession, counselorController.createSession);
 router.post('/tasks', validateAssignTask, counselorController.assignTask);
+
+// Mock endpoints to prevent HTML 404 errors in Flutter console
+router.get('/stats', (req, res) => {
+  res.status(200).json({
+    totalStudents: 0,
+    activeStudents: 0,
+    lowProgress: 0,
+    highIndecision: 0,
+    requests: 0,
+    reports: 0
+  });
+});
+
+router.get('/consultations', (req, res) => {
+  res.status(200).json([]);
+});
 
 export default router;

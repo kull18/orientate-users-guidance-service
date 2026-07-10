@@ -68,4 +68,37 @@ export class CounselorController {
       next(err);
     }
   };
+
+  getStudents = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const students = await this.counselorUseCases.getStudents(counselorId);
+      res.status(200).json(students);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getGroupDetails = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const { groupId } = req.params;
+      const group = await this.counselorUseCases.getGroupDetails(groupId, counselorId);
+      res.status(200).json(group);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  updateGroup = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const { groupId } = req.params;
+      const { name, accessCode } = req.body;
+      const group = await this.counselorUseCases.updateGroup(groupId, counselorId, name, accessCode);
+      res.status(200).json(group);
+    } catch (err) {
+      next(err);
+    }
+  };
 }

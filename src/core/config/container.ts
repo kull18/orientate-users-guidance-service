@@ -19,7 +19,8 @@ import { GetStudentFile } from '../../application/use-cases/GetStudentFile';
 import { StudentController } from '../../infrastructure/adapters/inputs/http/controllers/StudentController';
 import { CounselorController } from '../../infrastructure/adapters/inputs/http/controllers/CounselorController';
 
-import { EntityNotFoundException, UnauthorizedActionException } from '../../domain/exceptions/BusinessException';
+import { EntityNotFoundException, UnauthorizedActionException, DuplicateEntityException } from '../../domain/exceptions/BusinessException';
+import { Group } from '../../domain/entities/Group';
 
 // 1. Output Adapters (Repositories)
 export const studentRepository: StudentRepositoryPort = new PostgresStudentRepository(pool);
@@ -63,6 +64,10 @@ class StudentUseCasesImpl implements StudentUseCasesPort {
     }
     return profile;
   }
+
+  async getJoinedGroups(userId: string) {
+    return this.studentRepo.findJoinedGroups(userId);
+  }
 }
 
 class CounselorUseCasesImpl implements CounselorUseCasesPort {
@@ -103,6 +108,49 @@ class CounselorUseCasesImpl implements CounselorUseCasesPort {
 
   async assignTask(counselorId: string, data: any) {
     return this.assignTskUC.execute(counselorId, data);
+  }
+
+  async getStudents(counselorId: string) {
+    return this.counselorRepo.findStudentsByCounselorId(counselorId);
+  }
+
+  async getGroupDetails(groupId: string, counselorId: string): Promise<Group> {
+    const group = await this.counselorRepo.findGroupById(groupId);
+    if (!group) {
+      throw new EntityNotFoundException(`Grupo no encontrado con ID ${groupId}`);
+    }
+    if (group.counselorId !== counselorId) {
+      throw new UnauthorizedActionException('No tienes permisos para ver los detalles de este grupo.');
+    }
+    return group;
+  }
+
+  async updateGroup(groupId: string, counselorId: string, name?: string, accessCode?: string): Promise<Group> {
+    const group = await this.counselorRepo.findGroupById(groupId);
+    if (!group) {
+      throw new EntityNotFoundException(`Grupo no encontrado con ID ${groupId}`);
+    }
+    if (group.counselorId !== counselorId) {
+      throw new UnauthorizedActionException('No tienes permisos para modificar este grupo.');
+    }
+
+    if (accessCode && accessCode !== group.accessCode) {
+      const existing = await this.counselorRepo.findGroupByAccessCode(accessCode);
+      if (existing) {
+        throw new DuplicateEntityException('El código de acceso ya está en uso por otro grupo.');
+      }
+    }
+
+    const updatedGroup = new Group({
+      id: group.id,
+      counselorId: group.counselorId,
+      name: name || group.name,
+      accessCode: accessCode || group.accessCode,
+      createdAt: group.createdAt,
+      updatedAt: new Date()
+    });
+
+    return this.counselorRepo.updateGroup(updatedGroup);
   }
 }
 

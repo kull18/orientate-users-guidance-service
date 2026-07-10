@@ -9,5 +9,6 @@ export interface StudentRepositoryPort {
   findGroupByAccessCode(accessCode: string): Promise<Group | null>;
   addStudentToGroup(userId: string, groupId: string): Promise<void>;
   isStudentInGroup(userId: string, groupId: string): Promise<boolean>;
+  findJoinedGroups(userId: string): Promise<Group[]>;
   saveAlert(alert: Alert): Promise<Alert>;
 }

@@ -1,4 +1,5 @@
 import { StudentProfile } from '../../../domain/entities/StudentProfile';
+import { Group } from '../../../domain/entities/Group';
 
 export interface CreateStudentProfileInput {
   subjectsLiked: string[];
@@ -25,4 +26,5 @@ export interface StudentUseCasesPort {
   getProfile(userId: string): Promise<StudentProfile>;
   updateProfile(userId: string, data: UpdateStudentProfileInput): Promise<StudentProfile>;
   joinGroup(userId: string, accessCode: string): Promise<void>;
+  getJoinedGroups(userId: string): Promise<Group[]>;
 }

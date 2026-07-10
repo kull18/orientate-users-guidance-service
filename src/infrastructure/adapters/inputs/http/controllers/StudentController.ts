@@ -45,4 +45,15 @@ export class StudentController {
       next(err);
     }
   };
+
+  getJoinedGroups = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const groups = await this.studentUseCases.getJoinedGroups(userId);
+      res.status(200).json(groups);
+    } catch (err) {
+      next(err);
+    }
+  };
 }
+

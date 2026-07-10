@@ -23,7 +23,7 @@ export class PostgresCounselorRepository implements CounselorRepositoryPort {
 
   private mapRowToProfile(row: any): StudentProfile {
     return new StudentProfile({
-      id: row.id,
+      id: row.user_id,
       userId: row.user_id,
       subjectsLiked: row.subjects_liked || [],
       subjectsDisliked: row.subjects_disliked || [],
@@ -292,6 +292,41 @@ export class PostgresCounselorRepository implements CounselorRepositoryPort {
       return (groupCount > 0 || sessionCount > 0);
     } catch (error: any) {
       throw new DatabaseException(`Error verifying student-counselor association: ${error.message}`);
+    }
+  }
+
+  async findStudentsByCounselorId(counselorId: string): Promise<StudentProfile[]> {
+    const query = `
+      SELECT DISTINCT sp.* 
+      FROM student_profiles sp
+      JOIN student_group sg ON sp.user_id = sg.user_id
+      JOIN groups g ON sg.group_id = g.id
+      WHERE g.counselor_id = $1
+      ORDER BY sp.created_at DESC;
+    `;
+    try {
+      const result = await this.pool.query(query, [counselorId]);
+      return result.rows.map((row) => this.mapRowToProfile(row));
+    } catch (error: any) {
+      throw new DatabaseException(`Error finding counselor students: ${error.message}`);
+    }
+  }
+
+  async updateGroup(group: Group): Promise<Group> {
+    const query = `
+      UPDATE groups 
+      SET name = $1, access_code = $2, updated_at = NOW()
+      WHERE id = $3
+      RETURNING *;
+    `;
+    try {
+      const result = await this.pool.query(query, [group.name, group.accessCode, group.id]);
+      if (result.rows.length === 0) {
+        throw new DatabaseException(`Group not found to update with ID ${group.id}`);
+      }
+      return this.mapRowToGroup(result.rows[0]);
+    } catch (error: any) {
+      throw new DatabaseException(`Error updating group: ${error.message}`);
     }
   }
 }
