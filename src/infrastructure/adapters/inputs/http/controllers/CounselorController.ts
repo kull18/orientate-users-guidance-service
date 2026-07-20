@@ -101,4 +101,54 @@ export class CounselorController {
       next(err);
     }
   };
+
+  getAppointments = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const appointments = await this.counselorUseCases.getAppointments(counselorId);
+      res.status(200).json(appointments);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  deleteGroup = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const { groupId } = req.params;
+      await this.counselorUseCases.deleteGroup(groupId, counselorId);
+      res.status(200).json({
+        status: 'success',
+        statusCode: 200,
+        message: 'Grupo eliminado exitosamente.'
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  setAvailability = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const { slots } = req.body;
+      await this.counselorUseCases.setAvailability(counselorId, slots);
+      res.status(200).json({
+        status: 'success',
+        statusCode: 200,
+        message: 'Horario de disponibilidad guardado exitosamente.'
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getAvailability = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const counselorId = req.user!.id;
+      const availability = await this.counselorUseCases.getAvailability(counselorId);
+      res.status(200).json(availability);
+    } catch (err) {
+      next(err);
+    }
+  };
 }

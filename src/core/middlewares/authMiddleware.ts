@@ -57,7 +57,8 @@ export const requireRole = (allowedRoles: string[]) => {
       return;
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const upperAllowed = allowedRoles.map(r => r.toUpperCase());
+    if (!upperAllowed.includes(req.user.role)) {
       res.status(403).json({ error: 'Acceso denegado: permisos insuficientes.' });
       return;
     }

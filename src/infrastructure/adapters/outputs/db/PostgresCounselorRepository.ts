@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { CounselorRepositoryPort } from '../../../../application/ports/outputs/CounselorRepositoryPort';
+import { CounselorRepositoryPort, StudentWithProfile, AvailabilitySlot } from '../../../../application/ports/outputs/CounselorRepositoryPort';
 import { Group } from '../../../../domain/entities/Group';
 import { StudentProfile } from '../../../../domain/entities/StudentProfile';
 import { Session } from '../../../../domain/entities/Session';
@@ -83,17 +83,50 @@ export class PostgresCounselorRepository implements CounselorRepositoryPort {
     }
   }
 
-  async findStudentsByGroupId(groupId: string): Promise<StudentProfile[]> {
+  async findStudentsByGroupId(groupId: string): Promise<StudentWithProfile[]> {
+    const isProd = process.env.DB_HOST === 'postgres-db';
+    const connectionString = isProd
+      ? 'host=127.0.0.1 dbname=auth_db user=postgres password=super-secure-db-password-123'
+      : `host=${process.env.DB_HOST || 'localhost'} dbname=orientate_auth user=${process.env.DB_USER || 'postgres'} password=${process.env.DB_PASSWORD || 'regiber123'}`;
     const query = `
-      SELECT sp.* 
+      SELECT 
+        sp.user_id as "userId",
+        u.name,
+        u.email,
+        sp.subjects_liked as "subjectsLiked",
+        sp.subjects_disliked as "subjectsDisliked",
+        sp.interests,
+        sp.skills,
+        sp.needs_scholarship as "needsScholarship",
+        sp.study_abroad as "studyAbroad",
+        sp.vocational_clarity as "vocationalClarity",
+        sp.created_at as "createdAt",
+        sp.updated_at as "updatedAt"
       FROM student_profiles sp
       JOIN student_group sg ON sp.user_id = sg.user_id
-      WHERE sg.group_id = $1
+      CROSS JOIN dblink(
+        $2,
+        'SELECT id, name, email FROM users'
+      ) AS u(id UUID, name VARCHAR, email VARCHAR)
+      WHERE sg.group_id = $1 AND u.id = sp.user_id
       ORDER BY sp.created_at DESC;
     `;
     try {
-      const result = await this.pool.query(query, [groupId]);
-      return result.rows.map((row) => this.mapRowToProfile(row));
+      const result = await this.pool.query(query, [groupId, connectionString]);
+      return result.rows.map((row) => ({
+        userId: row.userId,
+        name: row.name,
+        email: row.email,
+        subjectsLiked: row.subjectsLiked || [],
+        subjectsDisliked: row.subjectsDisliked || [],
+        interests: row.interests || [],
+        skills: row.skills || [],
+        needsScholarship: !!row.needsScholarship,
+        studyAbroad: !!row.studyAbroad,
+        vocationalClarity: row.vocationalClarity,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+      }));
     } catch (error: any) {
       throw new DatabaseException(`Error finding students in group: ${error.message}`);
     }
@@ -295,18 +328,51 @@ export class PostgresCounselorRepository implements CounselorRepositoryPort {
     }
   }
 
-  async findStudentsByCounselorId(counselorId: string): Promise<StudentProfile[]> {
+  async findStudentsByCounselorId(counselorId: string): Promise<StudentWithProfile[]> {
+    const isProd = process.env.DB_HOST === 'postgres-db';
+    const connectionString = isProd
+      ? 'host=127.0.0.1 dbname=auth_db user=postgres password=super-secure-db-password-123'
+      : `host=${process.env.DB_HOST || 'localhost'} dbname=orientate_auth user=${process.env.DB_USER || 'postgres'} password=${process.env.DB_PASSWORD || 'regiber123'}`;
     const query = `
-      SELECT DISTINCT sp.* 
+      SELECT DISTINCT
+        sp.user_id as "userId",
+        u.name,
+        u.email,
+        sp.subjects_liked as "subjectsLiked",
+        sp.subjects_disliked as "subjectsDisliked",
+        sp.interests,
+        sp.skills,
+        sp.needs_scholarship as "needsScholarship",
+        sp.study_abroad as "studyAbroad",
+        sp.vocational_clarity as "vocationalClarity",
+        sp.created_at as "createdAt",
+        sp.updated_at as "updatedAt"
       FROM student_profiles sp
       JOIN student_group sg ON sp.user_id = sg.user_id
       JOIN groups g ON sg.group_id = g.id
-      WHERE g.counselor_id = $1
+      CROSS JOIN dblink(
+        $2,
+        'SELECT id, name, email FROM users'
+      ) AS u(id UUID, name VARCHAR, email VARCHAR)
+      WHERE g.counselor_id = $1 AND u.id = sp.user_id
       ORDER BY sp.created_at DESC;
     `;
     try {
-      const result = await this.pool.query(query, [counselorId]);
-      return result.rows.map((row) => this.mapRowToProfile(row));
+      const result = await this.pool.query(query, [counselorId, connectionString]);
+      return result.rows.map((row) => ({
+        userId: row.userId,
+        name: row.name,
+        email: row.email,
+        subjectsLiked: row.subjectsLiked || [],
+        subjectsDisliked: row.subjectsDisliked || [],
+        interests: row.interests || [],
+        skills: row.skills || [],
+        needsScholarship: !!row.needsScholarship,
+        studyAbroad: !!row.studyAbroad,
+        vocationalClarity: row.vocationalClarity,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+      }));
     } catch (error: any) {
       throw new DatabaseException(`Error finding counselor students: ${error.message}`);
     }
@@ -327,6 +393,83 @@ export class PostgresCounselorRepository implements CounselorRepositoryPort {
       return this.mapRowToGroup(result.rows[0]);
     } catch (error: any) {
       throw new DatabaseException(`Error updating group: ${error.message}`);
+    }
+  }
+
+  async findSessionsByCounselorId(counselorId: string): Promise<Session[]> {
+    const query = 'SELECT * FROM counselor_sessions WHERE counselor_id = $1 ORDER BY session_date DESC;';
+    try {
+      const result = await this.pool.query(query, [counselorId]);
+      return result.rows.map((row) => new Session({
+        id: row.id,
+        studentId: row.student_id,
+        counselorId: row.counselor_id,
+        sessionDate: row.session_date,
+        motive: row.motive,
+        observations: row.observations,
+        agreement: row.agreement,
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    } catch (error: any) {
+      throw new DatabaseException(`Error finding counselor sessions: ${error.message}`);
+    }
+  }
+
+  async deleteGroup(groupId: string, counselorId: string): Promise<void> {
+    const query = 'DELETE FROM groups WHERE id = $1 AND counselor_id = $2;';
+    try {
+      const result = await this.pool.query(query, [groupId, counselorId]);
+      if (result.rowCount === 0) {
+        throw new DatabaseException(`No se encontró el grupo con ID ${groupId} o no pertenece a este orientador.`);
+      }
+    } catch (error: any) {
+      if (error instanceof DatabaseException) throw error;
+      throw new DatabaseException(`Error al eliminar grupo: ${error.message}`);
+    }
+  }
+
+  async saveAvailability(counselorId: string, slots: { dayOfWeek: number, startTime: string, endTime: string }[]): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM counselor_availability WHERE counselor_id = $1', [counselorId]);
+      if (slots && slots.length > 0) {
+        for (const slot of slots) {
+          await client.query(
+            'INSERT INTO counselor_availability (counselor_id, day_of_week, start_time, end_time) VALUES ($1, $2, $3, $4)',
+            [counselorId, slot.dayOfWeek, slot.startTime, slot.endTime]
+          );
+        }
+      }
+      await client.query('COMMIT');
+    } catch (error: any) {
+      await client.query('ROLLBACK');
+      throw new DatabaseException(`Error saving counselor availability: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  async findAvailabilityByCounselorId(counselorId: string): Promise<AvailabilitySlot[]> {
+    const query = `
+      SELECT id, counselor_id as "counselorId", day_of_week as "dayOfWeek", start_time as "startTime", end_time as "endTime"
+      FROM counselor_availability
+      WHERE counselor_id = $1
+      ORDER BY day_of_week ASC, start_time ASC;
+    `;
+    try {
+      const result = await this.pool.query(query, [counselorId]);
+      return result.rows.map((row) => ({
+        id: row.id,
+        counselorId: row.counselorId,
+        dayOfWeek: row.dayOfWeek,
+        startTime: row.startTime,
+        endTime: row.endTime
+      }));
+    } catch (error: any) {
+      throw new DatabaseException(`Error finding counselor availability: ${error.message}`);
     }
   }
 }

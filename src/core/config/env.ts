@@ -12,6 +12,7 @@ export interface Env {
   DB_USER: string;
   DB_PASSWORD?: string;
   DB_NAME: string;
+  REDIS_URL: string;
 }
 
 const getEnvOrThrow = (key: string): string => {
@@ -34,4 +35,5 @@ export const env: Env = {
   DB_USER: getEnvOrDefault('DB_USER', 'postgres'),
   DB_PASSWORD: process.env.DB_PASSWORD,
   DB_NAME: getEnvOrDefault('DB_NAME', 'guidance_db'),
+  REDIS_URL: getEnvOrDefault('REDIS_URL', 'redis://localhost:6379'),
 };

@@ -118,12 +118,14 @@ export const validateCreateGroup = (req: Request, res: Response, next: NextFunct
     throw new ValidationException('El nombre del grupo (name) es requerido y debe ser texto.');
   }
 
-  if (typeof accessCode !== 'string' || accessCode.trim() === '') {
-    throw new ValidationException('El código de acceso (accessCode) es requerido y debe ser texto.');
+  if (accessCode !== undefined && accessCode !== null) {
+    if (typeof accessCode !== 'string' || accessCode.trim() === '') {
+      throw new ValidationException('El código de acceso (accessCode) debe ser un texto no vacío.');
+    }
+    req.body.accessCode = accessCode.trim();
   }
 
   req.body.name = name.trim();
-  req.body.accessCode = accessCode.trim();
   next();
 };
 
@@ -247,4 +249,73 @@ export const validateUuidParam = (paramName: string) => {
     next();
   };
 };
+
+// 8. Validate Alumni Profile (PUT /alumni/profile)
+export const validateUpdateAlumniProfile = (req: Request, res: Response, next: NextFunction): void => {
+  const { name, email, careerId, universityId, currentJob, company, graduationYear, experienceSummary, linkedinUrl } = req.body;
+
+  if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+    throw new ValidationException('El nombre (name) debe ser texto no vacío.');
+  }
+
+  if (email !== undefined && (typeof email !== 'string' || email.trim() === '')) {
+    throw new ValidationException('El correo (email) debe ser texto no vacío.');
+  }
+
+  if (!isUUID(careerId)) {
+    throw new ValidationException('careerId es requerido y debe ser un UUID válido.');
+  }
+
+  if (!isUUID(universityId)) {
+    throw new ValidationException('universityId es requerido y debe ser un UUID válido.');
+  }
+
+  if (typeof currentJob !== 'string' || currentJob.trim() === '') {
+    throw new ValidationException('El puesto actual (currentJob) es requerido y debe ser texto.');
+  }
+
+  if (typeof company !== 'string' || company.trim() === '') {
+    throw new ValidationException('La empresa (company) es requerida y debe ser texto.');
+  }
+
+  if (typeof graduationYear !== 'number' || graduationYear < 1900 || graduationYear > 2100) {
+    throw new ValidationException('El año de graduación (graduationYear) es requerido y debe ser un año válido.');
+  }
+
+  if (experienceSummary !== undefined && typeof experienceSummary !== 'string') {
+    throw new ValidationException('experienceSummary debe ser texto.');
+  }
+
+  if (linkedinUrl !== undefined && typeof linkedinUrl !== 'string') {
+    throw new ValidationException('linkedinUrl debe ser texto.');
+  }
+
+  if (name !== undefined) req.body.name = name.trim();
+  if (email !== undefined) req.body.email = email.trim();
+  req.body.currentJob = currentJob.trim();
+  req.body.company = company.trim();
+  if (experienceSummary !== undefined) req.body.experienceSummary = experienceSummary.trim();
+  if (linkedinUrl !== undefined) req.body.linkedinUrl = linkedinUrl.trim();
+
+  next();
+};
+
+// 9. Validate Success Story (POST /alumni/stories)
+export const validateShareSuccessStory = (req: Request, res: Response, next: NextFunction): void => {
+  const { title, content } = req.body;
+
+  if (typeof title !== 'string' || title.trim() === '') {
+    throw new ValidationException('El título (title) es requerido y debe ser texto.');
+  }
+
+  if (typeof content !== 'string' || content.trim() === '') {
+    throw new ValidationException('El contenido (content) es requerido y debe ser texto.');
+  }
+
+  req.body.title = title.trim();
+  req.body.content = content.trim();
+
+  next();
+};
+
 

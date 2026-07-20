@@ -1,8 +1,10 @@
 import { Pool } from 'pg';
-import { StudentRepositoryPort } from '../../../../application/ports/outputs/StudentRepositoryPort';
+import { StudentRepositoryPort, CounselorInfo } from '../../../../application/ports/outputs/StudentRepositoryPort';
+import { AvailabilitySlot } from '../../../../application/ports/outputs/CounselorRepositoryPort';
 import { StudentProfile } from '../../../../domain/entities/StudentProfile';
 import { Group } from '../../../../domain/entities/Group';
 import { Alert } from '../../../../domain/entities/Alert';
+import { Session } from '../../../../domain/entities/Session';
 import { DatabaseException } from '../../../../domain/exceptions/BusinessException';
 
 export class PostgresStudentRepository implements StudentRepositoryPort {
@@ -200,6 +202,137 @@ export class PostgresStudentRepository implements StudentRepositoryPort {
       return result.rows.map(row => this.mapRowToGroup(row));
     } catch (error: any) {
       throw new DatabaseException(`Error finding joined groups: ${error.message}`);
+    }
+  }
+
+  async hasOverlappingSession(id: string, roleField: 'counselor_id' | 'student_id', date: Date): Promise<boolean> {
+    const query = `
+      SELECT COUNT(1) FROM counselor_sessions
+      WHERE ${roleField} = $1
+        AND status = 'SCHEDULED'
+        AND session_date > $2::timestamp with time zone - INTERVAL '1 hour'
+        AND session_date < $2::timestamp with time zone + INTERVAL '1 hour';
+    `;
+    try {
+      const result = await this.pool.query(query, [id, date]);
+      return parseInt(result.rows[0].count, 10) > 0;
+    } catch (error: any) {
+      throw new DatabaseException(`Error checking overlapping session: ${error.message}`);
+    }
+  }
+
+  async saveSession(session: Session): Promise<Session> {
+    const query = `
+      INSERT INTO counselor_sessions (student_id, counselor_id, session_date, motive, observations, agreement, status)
+      VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7)
+      RETURNING *;
+    `;
+    const values = [
+      session.studentId,
+      session.counselorId,
+      session.sessionDate,
+      session.motive,
+      session.observations || null,
+      session.agreement || null,
+      session.status
+    ];
+    try {
+      const result = await this.pool.query(query, values);
+      const row = result.rows[0];
+      return new Session({
+        id: row.id,
+        studentId: row.student_id,
+        counselorId: row.counselor_id,
+        sessionDate: row.session_date,
+        motive: row.motive,
+        observations: row.observations,
+        agreement: row.agreement,
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      });
+    } catch (error: any) {
+      throw new DatabaseException(`Error saving counselor session: \${error.message}`);
+    }
+  }
+
+  async findSessionsByStudentId(studentId: string): Promise<Session[]> {
+    const query = 'SELECT * FROM counselor_sessions WHERE student_id = $1 ORDER BY session_date DESC;';
+    try {
+      const result = await this.pool.query(query, [studentId]);
+      return result.rows.map((row) => new Session({
+        id: row.id,
+        studentId: row.student_id,
+        counselorId: row.counselor_id,
+        sessionDate: row.session_date,
+        motive: row.motive,
+        observations: row.observations,
+        agreement: row.agreement,
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    } catch (error: any) {
+      throw new DatabaseException(`Error finding student sessions: ${error.message}`);
+    }
+  }
+
+  async findCounselorByStudentId(studentId: string): Promise<CounselorInfo | null> {
+    const isProd = process.env.DB_HOST === 'postgres-db';
+    const connectionString = isProd
+      ? 'host=127.0.0.1 dbname=auth_db user=postgres password=super-secure-db-password-123'
+      : `host=${process.env.DB_HOST || 'localhost'} dbname=orientate_auth user=${process.env.DB_USER || 'postgres'} password=${process.env.DB_PASSWORD || 'regiber123'}`;
+    const query = `
+      SELECT 
+        c.counselor_id as id,
+        u.name,
+        u.email
+      FROM (
+        SELECT g.counselor_id
+        FROM student_group sg
+        JOIN groups g ON sg.group_id = g.id
+        WHERE sg.user_id = $1
+        LIMIT 1
+      ) c
+      CROSS JOIN dblink(
+        $2,
+        'SELECT id, name, email FROM users'
+      ) AS u(id UUID, name VARCHAR, email VARCHAR)
+      WHERE u.id = c.counselor_id;
+    `;
+    try {
+      const result = await this.pool.query(query, [studentId, connectionString]);
+      if (result.rows.length === 0) {
+        return null;
+      }
+      return {
+        id: result.rows[0].id,
+        name: result.rows[0].name,
+        email: result.rows[0].email
+      };
+    } catch (error: any) {
+      throw new DatabaseException(`Error finding student counselor: ${error.message}`);
+    }
+  }
+
+  async findCounselorAvailability(counselorId: string): Promise<AvailabilitySlot[]> {
+    const query = `
+      SELECT id, counselor_id as "counselorId", day_of_week as "dayOfWeek", start_time as "startTime", end_time as "endTime"
+      FROM counselor_availability
+      WHERE counselor_id = $1
+      ORDER BY day_of_week ASC, start_time ASC;
+    `;
+    try {
+      const result = await this.pool.query(query, [counselorId]);
+      return result.rows.map((row) => ({
+        id: row.id,
+        counselorId: row.counselorId,
+        dayOfWeek: row.dayOfWeek,
+        startTime: row.startTime,
+        endTime: row.endTime
+      }));
+    } catch (error: any) {
+      throw new DatabaseException(`Error finding counselor availability: ${error.message}`);
     }
   }
 }

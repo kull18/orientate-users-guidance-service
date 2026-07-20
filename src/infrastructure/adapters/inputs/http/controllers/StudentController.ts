@@ -55,5 +55,49 @@ export class StudentController {
       next(err);
     }
   };
+
+  scheduleAppointment = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const { sessionDate, motive } = req.body;
+      const session = await this.studentUseCases.scheduleAppointment(userId, sessionDate, motive);
+      res.status(201).json({
+        status: 'success',
+        data: session
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getAppointments = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const appointments = await this.studentUseCases.getAppointments(userId);
+      res.status(200).json(appointments);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getCounselorInfo = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const counselor = await this.studentUseCases.getCounselor(userId);
+      res.status(200).json(counselor);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getCounselorAvailability = async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const availability = await this.studentUseCases.getCounselorAvailability(userId);
+      res.status(200).json(availability);
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 

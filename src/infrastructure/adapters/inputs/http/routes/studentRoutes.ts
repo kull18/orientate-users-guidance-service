@@ -19,5 +19,9 @@ router.get('/profile', studentController.getProfile);
 router.patch('/profile', validateUpdateStudentProfile, studentController.updateProfile);
 router.post('/join-group', validateJoinGroup, studentController.joinGroup);
 router.get('/groups', studentController.getJoinedGroups);
+router.post('/appointments', studentController.scheduleAppointment);
+router.get('/appointments', studentController.getAppointments);
+router.get('/counselor', studentController.getCounselorInfo);
+router.get('/counselor/availability', studentController.getCounselorAvailability);
 
 export default router;
