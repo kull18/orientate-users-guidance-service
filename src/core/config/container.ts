@@ -269,11 +269,51 @@ class AlumniUseCasesImpl implements AlumniUseCasesPort {
   }
 
   async createUniversityAlumnus(universityId: string, data: any) {
-    const { v4: uuidv4 } = require('uuid');
+    let userId = data.userId;
+
+    if (!userId && data.email && data.password) {
+      const authUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3001';
+      try {
+        const registerRes = await fetch(`${authUrl}/api/v1/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            password: data.password,
+            roleName: 'alumni',
+            privacyAccepted: true
+          })
+        });
+
+        const registerData = await registerRes.json() as any;
+        if (registerRes.ok && registerData?.data?.user?.id) {
+          userId = registerData.data.user.id;
+        } else if (registerData?.error?.includes('ya existe') || registerRes.status === 409) {
+          const { BusinessException } = require('../../domain/exceptions/BusinessException');
+          throw new BusinessException(`El correo '${data.email}' ya está registrado en el sistema.`, 409);
+        } else {
+          const { BusinessException } = require('../../domain/exceptions/BusinessException');
+          throw new BusinessException(
+            registerData?.error || registerData?.message || 'Error al registrar credenciales de usuario para el egresado.',
+            registerRes.status || 400
+          );
+        }
+      } catch (err: any) {
+        const { BusinessException } = require('../../domain/exceptions/BusinessException');
+        if (err instanceof BusinessException) throw err;
+        throw new BusinessException(`No se pudo crear la cuenta de inicio de sesión: ${err.message}`, 500);
+      }
+    }
+
+    if (!userId) {
+      const { v4: uuidv4 } = require('uuid');
+      userId = uuidv4();
+    }
+
     const { AlumniProfile } = require('../../domain/entities/AlumniProfile');
-    const newUserId = uuidv4();
     const profile = new AlumniProfile({
-      userId: newUserId,
+      userId: userId,
       name: data.name,
       email: data.email,
       careerId: data.careerId,

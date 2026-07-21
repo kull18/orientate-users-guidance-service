@@ -31,6 +31,10 @@ router.get('/university/alumni', authMiddleware, requireRole(universityRoles), a
 router.post('/university/alumni', authMiddleware, requireRole(universityRoles), alumniController.createUniversityAlumnus);
 router.delete('/university/alumni/:alumniId', authMiddleware, requireRole(universityRoles), alumniController.deleteUniversityAlumnus);
 
+router.get('/university/stories/pending', authMiddleware, requireRole(universityRoles), alumniController.getPendingSuccessStories);
+router.post('/university/stories/:storyId/approve', authMiddleware, requireRole(universityRoles), validateUuidParam('storyId'), alumniController.approveSuccessStory);
+router.post('/university/stories/:storyId/reject', authMiddleware, requireRole(universityRoles), validateUuidParam('storyId'), alumniController.rejectSuccessStory);
+
 router.get('/alumni/university', authMiddleware, requireRole(universityRoles), alumniController.getUniversityAlumni);
 router.post('/alumni/university', authMiddleware, requireRole(universityRoles), alumniController.createUniversityAlumnus);
 router.delete('/alumni/university/:alumniId', authMiddleware, requireRole(universityRoles), alumniController.deleteUniversityAlumnus);
